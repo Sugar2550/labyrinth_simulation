@@ -60,8 +60,7 @@
   <div class="attention">
     ※残キャラ数の値は編成を埋めてから入力してください。<br>
     ※「残キャラ数」は、10体編成した後に残っているキャラ数です。<br>
-    ※「現在階層」は、次に挑戦する階層を入力してください。<br>
-    ※無敗前提です。敗北したら数値を入れ直してください。
+    ※「現在階層」は、次に挑戦する階層を入力してください。
   </div>
   <form id="simForm">
     <label>
@@ -74,7 +73,7 @@
     </label>
     <label>
       勝率(%):
-      <input type="number" id="winrate" value="100" min="0" max="100">
+      <input type="number" id="winrate" value="100" min="1" max="100">
     </label>
     <label>
       シミュレーション回数:
@@ -110,6 +109,12 @@
       const reserveCharsStart = parseInt(document.getElementById("chars").value);
       const floorStart = parseInt(document.getElementById("floor").value);
       const simCount = parseInt(document.getElementById("count").value);
+      const winRateInput = document.getElementById("winrate");
+      const winRateValue = parseFloat(winRateInput.value);
+      if (winRateValue < 1 || winRateValue > 100) {
+        alert("勝率は1〜100%の範囲で入力してください。");
+        return;
+      }
       const winRate = parseFloat(document.getElementById("winrate").value) / 100;
       let totalFloors = 0;
       summary = {};
