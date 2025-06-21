@@ -85,7 +85,7 @@
   <button onclick="downloadCSV()">Download csv</button>
   <div id="result"></div>
   <table id="summaryTable">
-    <thead><tr><th>クリアした階層</th><th>到達回数</th></tr></thead>
+    <thead><tr><th>クリア階層</th><th>到達回数</th></tr></thead>
     <tbody></tbody>
   </table>
   <div id="chartContainer">
@@ -227,7 +227,7 @@
         alert("先にシミュレーションを実行してください。");
         return;
       }
-      let csv = "クリアした階層,到達回数\n";
+      let csv = "クリア階層,到達回数\n";
       const sortedKeys = Object.keys(summary).map(Number).sort((a, b) => a - b);
       for (let key of sortedKeys) {
         csv += `${key},${summary[key]}\n`;
