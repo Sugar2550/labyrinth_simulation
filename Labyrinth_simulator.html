@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Labyrinth_simurator</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    body { font-family: sans-serif; padding: 1em; background: #f9f9f9; }
+    h1 { font-size: 1.5em; text-align: center; }
+    .attention { color: #d00; font-weight: bold; margin-bottom: 1em; }
+    #simForm {
+      max-width: 400px;
+      margin: 0 auto 1em auto;
+      display: flex;
+      flex-direction: column;
+      gap: 0.5em;
+    }
+    #simForm label {
+      display: flex;
+      flex-direction: column;
+      font-size: 1em;
+      width: 100%;
+    }
+    #simForm input {
+      font-size: 1em;
+      padding: 0.5em;
+      margin-top: 0.3em;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    #simForm button {
+      font-size: 1em;
+      padding: 0.7em;
+      background: #2d8cff;
+      color: #fff;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      margin-top: 0.5em;
+      width: 100%;
+    }
+    table { border-collapse: collapse; width: 100%; margin-top: 1em; }
+    th, td { border: 1px solid #ccc; padding: 0.5em; text-align: center; }
+    th { background-color: #eee; }
+    #result { margin-top: 1em; font-weight: bold; }
+    #chartContainer { margin-top: 2em; }
+    canvas { max-width: 500px; margin: 0 auto; display: block; }
+    @media (max-width: 600px) {
+      #simForm {
+        max-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body>
+  <h1>グランドアビス到達階層シミュレータ</h1>
+  <div class="attention">
+    ※残キャラ数の値は編成を埋めてから入力してください。<br>
+    ※「残キャラ数」は、10体編成した後に残っているキャラ数です。<br>
+    ※「現在階層」は、次に挑戦する階層を入力してください。
+  </div>
+  <form id="simForm">
+    <label>
+      残キャラ数:
+      <input type="number" id="chars" value="20" min="0">
+    </label>
+    <label>
+      現在階層:
+      <input type="number" id="floor" value="1" min="1" max="100">
+    </label>
+    <label>
+      シミュレーション回数:
+      <input type="number" id="count" value="1000" min="1">
+    </label>
+    <button type="submit">シミュレーション開始</button>
+  </form>
+  <button onclick="downloadCSV()">Download csv</button>
+  <div id="result"></div>
+  <table id="summaryTable">
+    <thead><tr><th>階層</th><th>到達回数</th></tr></thead>
+    <tbody></tbody>
+  </table>
+  <div id="chartContainer">
+    <canvas id="resultChart" width="400" height="400"></canvas>
+  </div>
+  <script>
+    let summary = {};
+    let chart;
+    function getLossRange(floor) {
+      if (1 <= floor && floor <= 9) return [3, 5];
+      if (floor === 10) return [7, 9];
+      if ((11 <= floor && floor <= 19) || (21 <= floor && floor <= 29)) return [3, 5];
+      if (floor === 20 || floor === 30) return [7, 9];
+      if ((31 <= floor && floor <= 39) || (41 <= floor && floor <= 49) || (51 <= floor && floor <= 59)) return [4, 6];
+      if (floor === 40 || floor === 50 || floor === 60) return [7, 9];
+      if ((61 <= floor && floor <= 69) || (71 <= floor && floor <= 79) ||
+          (81 <= floor && floor <= 89) || (91 <= floor && floor <= 98)) return [5, 7];
+      if (floor === 70 || floor === 80 || floor === 90 || floor === 99) return [7, 9];
+      return [0, 0];
+    }
+    function simulate() {
+      const reserveCharsStart = parseInt(document.getElementById("chars").value);
+      const floorStart = parseInt(document.getElementById("floor").value);
+      const simCount = parseInt(document.getElementById("count").value);
+      let totalFloors = 0;
+      summary = {};
+      for (let i = 0; i < simCount; i++) {
+        let reserveChars = reserveCharsStart;
+        let floor = floorStart;
+        let currentChars = 10;
+        while (floor <= 99) {
+          let [minLoss, maxLoss] = getLossRange(floor);
+          let loss = minLoss + Math.floor(Math.random() * (maxLoss - minLoss + 1));
+          currentChars -= loss;
+          if (currentChars < 0) currentChars = 0;
+          if (currentChars > 0 && Math.random() < 0.6) {
+            currentChars += 1;
+          }
+          let need = 10 - currentChars;
+          if (need > 0) {
+            if (reserveChars >= need) {
+              reserveChars -= need;
+              currentChars += need;
+            } else {
+              break;
+            }
+          }
+          floor++;
+        }
+        let reachedFloor = floor;
+        if (floor === 100) {
+          let need = 10 - currentChars;
+          if (need > 0) {
+            if (reserveChars >= need) {
+              reachedFloor = 100;
+            } else {
+              reachedFloor = 99;
+            }
+          } else {
+            reachedFloor = 100;
+          }
+        }
+        totalFloors += reachedFloor;
+        summary[reachedFloor] = (summary[reachedFloor] || 0) + 1;
+      }
+      const expected = (totalFloors / simCount).toFixed(2);
+      document.getElementById("result").textContent = `到達階層の期待値：${expected} 層`;
+      const tbody = document.querySelector("#summaryTable tbody");
+      tbody.innerHTML = "";
+      const sortedKeys = Object.keys(summary).map(Number).sort((a, b) => a - b);
+      for (let key of sortedKeys) {
+        let row = document.createElement("tr");
+        row.innerHTML = `<td>${key}</td><td>${summary[key]}</td>`;
+        tbody.appendChild(row);
+      }
+      drawChart(summary, simCount);
+    }
+    document.getElementById("simForm").addEventListener("submit", function(e) {
+      e.preventDefault();
+      simulate();
+    });
+    function drawChart(summary, total) {
+      const labels = [];
+      const data = [];
+      let otherCount = 0;
+      for (let [floor, count] of Object.entries(summary)) {
+        const percent = (count / total) * 100;
+        if (percent < 5) {
+          otherCount += count;
+        } else {
+          labels.push(`${floor}階`);
+          data.push(count);
+        }
+      }
+      if (otherCount > 0) {
+        labels.push("その他");
+        data.push(otherCount);
+      }
+      if (chart) chart.destroy();
+      const canvas = document.getElementById("resultChart");
+      if (!canvas) {
+        alert("グラフ描画用のcanvasが見つかりませんでした。");
+        return;
+      }
+      const ctx = canvas.getContext("2d");
+      chart = new Chart(ctx, {
+        type: 'pie',
+        data: {
+          labels: labels,
+          datasets: [{
+            label: "到達割合",
+            data: data,
+            backgroundColor: labels.map((_, i) => `hsl(${i * 40 % 360}, 70%, 70%)`)
+          }]
+        },
+        options: {
+          responsive: true,
+          plugins: {
+            legend: { position: 'bottom' }
+          }
+        }
+      });
+    }
+    function downloadCSV() {
+      if (!summary || Object.keys(summary).length === 0) {
+        alert("先にシミュレーションを実行してください。");
+        return;
+      }
+      let csv = "階層,到達回数\n";
+      const sortedKeys = Object.keys(summary).map(Number).sort((a, b) => a - b);
+      for (let key of sortedKeys) {
+        csv += `${key},${summary[key]}\n`;
+      }
+      const blob = new Blob([csv], { type: 'text/csv' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "floor_summary.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    }
+  </script>
+</body>
+</html>
