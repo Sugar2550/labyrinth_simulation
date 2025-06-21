@@ -118,12 +118,15 @@
         let floor = floorStart;
         let currentChars = 10;
         let defeated = false;
-        while (floor <= 99 && !defeated) {
+        while (floor <= 99) {
           if (Math.random() > winRate) {
             defeated = true; 
             reserveChars -= 2; 
             if (reserveChars < 0) reserveChars = 0;
-            break;
+            if (reserveChars < 0 || reserveChars + currentChars < 10) {
+            　break;
+            }
+            continue;
           }
           let [minLoss, maxLoss] = getLossRange(floor);
           let loss = minLoss + Math.floor(Math.random() * (maxLoss - minLoss + 1));
