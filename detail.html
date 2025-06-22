@@ -191,7 +191,6 @@
       for (let [floor, count] of Object.entries(summary)) {
           labels.push(`${floor}層`);
           data.push(count);
-        }
       }
       if (chart) chart.destroy();
       const canvas = document.getElementById("resultChart");
